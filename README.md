@@ -22,9 +22,27 @@
 | 2 | 总开关卡片注册到 `settings.plugin.item`，该插槽在 0.2 已被 `settings.plugins.tab` 分页机制取代 | `slots.inject` 对未声明插槽静默失效：开关不出现，主题开着却关不掉 | 把总开关搬到仍然存在的 `settings.general.item`（**设置 → 通用 → 外观** 正下方）行首 |
 | 3 | ① `defineStore()` 返回的是句柄 `{ spec, create() }`，声明的 actions 只在 `create()` 出的实例上；② `slots.register` 的 `inject` **必须是工厂函数** | ① `pluginBound?.sync is not a function`；② `TypeError: inject is not a function` → `slot entry crashed`，整行静默消失 | ① 预先绑定 `store.create().actions` 并给调用加类型守卫；② 保持工厂形态，只在返回的 face 里补 `setEnabled` |
 | 4 | 0.2 的布局包把不透明 `--dsw-alias-bg-base` 画在 `.BynINW_centerCol`、`.Dc7zOa_root` 上；dockkit 又把右侧分栏柱（`._tabHost_:not(._float_)`）整根刷成同色 | 氛围层是 `position:fixed; z-index:-1`，被这些白底成片盖住 → **背景只在侧边栏可见**，主区域与右侧面板一片白 | 在插件样式表末尾追加覆盖，按类名子串（`centerCol` / `conversation` …）与 `[data-sidebar-right-panel]` 把底色置透明 |
+| 5 | 收起侧边栏时，0.2 的 frame 网格是 `grid-template-columns: 0px 2560px 0px`——**侧边栏的网格轨道就是 0px**，窄栏要靠列内内容自己撑出来。而主题给该列加了 `margin:12px`，配合 0.2 收起态的 `padding:0`，列宽被压到 1px：窄栏画不出来，展开按钮也随之落在所有已绘制图层之外（在按钮中心点做 `elementFromPoint`，拿到的是对话区滚动容器）。另外为宽侧边栏设计的玻璃卡底色也被套到了这条 64px 窄栏上，糊住了标题栏文字 | **收起后窄栏消失、展开按钮看不见也点不到，侧边栏收起即无法恢复**；即便勉强可见，标题栏也会被色块盖住 | 仅做两件事：收起态给该列 `min-width:64px`（**轨道仍为 0px**，不动其余网格几何）＋ `margin/padding/border-radius` 归零；并清掉玻璃卡的 `background/border/box-shadow/backdrop-filter`，让窄栏只当一条承载图标的条；再把 toggle 抬到 `z-index:40` 保证可点 |
 
 > 第 4 条**不能用分栏列号定位**：shell 左栏和右侧工具栏都带 `data-dockkit-column="0"`（各自独立编号），
 > 必须用 `[data-sidebar-right-panel]` 限定范围，否则会把左栏的玻璃卡片一起抹掉。
+>
+> 第 5 条**刻意不碰 DSH 自己的按钮定位**。排查过程留档，免得后来者重走：先后怀疑
+> `backdrop-filter`、入场动画 `_rail-in`、悬停下压写的 `transform`（`perspective(800px)…scale(1.01)`），
+> **三次都被实测数据否定**（逐一移除后按钮 `getBoundingClientRect` 毫无变化）；真正的原因是**列宽为 0**
+> ——轨道 `0px` 时谈边距、滤镜、包含块都没有意义。
+>
+> 另外试过用 `left/top` 反向补偿"列的 12px 外边距把包含块从视口换成列"造成的偏移（原版按钮 `(12,6)`、
+> 主题下 `(25,59)`）：**补偿规则实测未改变按钮 rect，且强制定位会让按钮在鼠标移到顶部时跳动**，因此整段
+> 已回退。按钮的位置完全交回 DSH；这个 2px 量级的差异（`(12,6)` vs `(25,59)`）作为已知差异保留，
+> 想彻底对齐需要改动主题的卡片边距策略，代价大于收益。
+>
+> 方法论教训：这类问题应当**先量尺寸与包含块**（`grid-template-columns`、列宽、`offsetParent` 链、
+> 原版/插件版同一元素 rect 对照），而不是先猜视觉属性；本文这一条就是靠"关掉插件的同元素 rect 对照表"
+> 才定位到根因的。
+
+
+
 
 ## 二、兼容性
 

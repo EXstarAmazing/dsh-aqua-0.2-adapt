@@ -219,6 +219,38 @@ export function patchBundle(file) {
   //    plugin's own stylesheet, matched on class-name fragments so a hashed
   //    build keeps matching.
   const cssTail = '[data-dsh-aqua] [data-aqua-critter=bubble]{opacity:0}}";'
+  // 8b. Collapsed-sidebar trap. Measured on the running UI; three causes in
+  //     sequence, each confirmed by rects rather than by reasoning:
+  //
+  //     a) WIDTH. 0.2 lays the frame out as `grid-template-columns: 0px 2560px 0px`
+  //        while collapsed: the sidebar's grid TRACK is 0px and the rail is meant
+  //        to grow out of the column's own content. The theme's `margin:12px`
+  //        plus `[data-windows-titlebar] ._root._collapsed{padding:0}` left the
+  //        column at 1px, so the rail never appeared and the expand button sat
+  //        outside every painted layer. `min-width` restores it while the track
+  //        stays 0px, so the rest of the app's grid geometry is untouched.
+  //     b) HIT TESTING. While the track is 0px the rail overflows ONTO the
+  //        conversation column, which paints later and therefore on top — the
+  //        button's centre resolved to the conversation scroll container. The
+  //        column must stay above it, and the rail must drop the glass-card paint
+  //        it inherited from the wide-sidebar rule (that card was covering the
+  //        titlebar text).
+  //     c) OFFSET — deliberately NOT fixed. Against the plugin-disabled baseline
+  //        the same toggle measures (12,6) stock vs (25,59) with the theme, because
+  //        the card's `margin:12px` makes that column (already `position:relative`
+  //        for the card) the fixed button's containing block. Compensating
+  //        `left/top` on the button was tried and made it worse (it jumped on
+  //        hover, and the compensating rule did not move the rect as predicted),
+  //        so the button's placement is left entirely to DSH: the theme supplies
+  //        only rail width and paint, and touches no positioning of DSH's chrome.
+  const collapsedFix = '[data-dsh-aqua] [data-sidebar-collapsed] [class*=sidebarCol]'
+    + '{min-width:64px!important;margin:0!important;padding:0!important;'
+    + 'border-radius:0!important;background:transparent!important;'
+    + 'backdrop-filter:none!important;border:0!important;box-shadow:none!important;'
+    + 'z-index:60!important}'
+    + '[data-dsh-aqua] [data-sidebar-collapsed] [class*=toggle],'
+    + '[data-dsh-aqua] [data-sidebar-collapsed] [class*=railIn] [class*=iconButton]'
+    + '{z-index:40!important;pointer-events:auto!important;visibility:visible!important;opacity:1!important}'
   const layoutOverride = '[data-dsh-aqua] [class*=centerCol],'
     + '[data-dsh-aqua] [class*=rightbarCol],'
     + '[data-dsh-aqua] [data-testid=conversation],'
@@ -245,6 +277,7 @@ export function patchBundle(file) {
     + 'body[data-windows-titlebar] [data-dsh-aqua] [class*=centerCol],'
     + 'body[data-windows-titlebar] [data-dsh-aqua] [class*=rightbarCol]'
     + '{border-radius:0!important}'
+    + collapsedFix
   replaceOnce(
     'ambient layout override',
     cssTail,

@@ -21,6 +21,11 @@ const NODE_MODULES = path.join(PROFILE, 'node_modules');
 const PKG_DIR = path.join(NODE_MODULES, 'dsh-client-ui-aqua');
 const TARBALL = path.join(KIT, 'dsh-client-ui-aqua-1.3.1.tgz');
 
+/** Block the current thread for a few milliseconds (no timers needed). */
+function sleep(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
 /** Minimal ustar reader (regular files only): the kit needs no npm to run. */
 function extractTgz(tgz, outDir) {
   const buf = zlib.gunzipSync(fs.readFileSync(tgz));
@@ -76,11 +81,29 @@ if (fs.existsSync(repoManifest)) {
 //    the master switch before anything is installed.
 execFileSync(process.execPath, [path.join(KIT, 'smoke-aqua.cjs'), bundle], { stdio: 'inherit' });
 
-// 4. Replace the installed package with the freshly patched copy.
-fs.rmSync(PKG_DIR, { recursive: true, force: true });
-fs.cpSync(staged, PKG_DIR, { recursive: true });
+// 4. Install by overwriting file by file. A running DSH instance keeps read
+//    handles on this package (its watcher reads cordis.patch.yml), and on
+//    Windows those handles block deletion — while writing over the files stays
+//    allowed. Copying file-by-file therefore avoids every delete, unlike
+//    rmSync or even cpSync (which recreates directories and hits EIO).
+fs.mkdirSync(PKG_DIR, { recursive: true });
+const overwrite = (fromDir, toDir) => {
+  fs.mkdirSync(toDir, { recursive: true });
+  for (const entry of fs.readdirSync(fromDir, { withFileTypes: true })) {
+    const from = path.join(fromDir, entry.name);
+    const to = path.join(toDir, entry.name);
+    if (entry.isDirectory()) { overwrite(from, to); continue; }
+    for (let attempt = 0; ; attempt += 1) {
+      try { fs.copyFileSync(from, to); break; } catch (error) {
+        if (attempt >= 5 || !['EPERM', 'EBUSY', 'EACCES'].includes(error.code)) throw error;
+        sleep(250);
+      }
+    }
+  }
+};
+overwrite(staged, PKG_DIR);
 fs.rmSync(stage, { recursive: true, force: true });
-console.log('installed', PKG_DIR);
+console.log('installed (in place)', PKG_DIR);
 
 // 5. Ensure the profile selects it and exempts it (no-op when already done).
 execFileSync(process.execPath, [path.join(KIT, 'register-aqua.cjs')], { stdio: 'inherit' });
