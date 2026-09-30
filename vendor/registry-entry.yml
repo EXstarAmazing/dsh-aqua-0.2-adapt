@@ -34,8 +34,9 @@ modes:
   - light
   - dark
 install:
-  target: github:EXstarAmazing/dsh-aqua-0.2-adapt
+  target: github:EXstarAmazing/dsh-aqua-0.2-adapt#ed8e543207f281f7a4e99170f8f9f8de0847fc66
   version: 1.3.2
+  commit: ed8e543207f281f7a4e99170f8f9f8de0847fc66
   desktop:
     mode: manual-only
     reason: npm-package-not-found

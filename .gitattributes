@@ -1,0 +1,9 @@
+# Keep every text file LF in the repository: this tree is a plugin bundle that
+# gets installed on Windows, macOS and Linux, and the patched lib/client.js must
+# stay byte-identical to the documented "tarball + patch" output.
+* text=auto eol=lf
+
+*.png binary
+*.webp binary
+*.tgz binary
+*.woff2 binary
