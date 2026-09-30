@@ -30,11 +30,18 @@
 
 | 项 | 值 |
 |---|---|
-| DSH Web | **0.2.0-rc.2**（已在 Windows 桌面版实测） |
 | 平台 | web |
 | 上游基线 | `@deepseek-ai/dsh-client-ui-aqua@1.3.1`（npm tarball，已附于 `vendor/`） |
 | 本分支版本 | 1.3.2 |
 | 许可 | **上游同时存在两种许可**，见下方说明 |
+
+- **本分支的兼容动作只针对 0.2.x**：在 0.2.0-rc.2 上它把上游修好；在 0.1.x 上不加任何改动，你拿到的就是上游原样行为。
+- 包内 `peerDependencies` 声明为 **DSH `^0.1.0-rc.5`**（上游原声明，未改动）。宿主启动时会按「精确 name@version」
+  校验，所以 0.2.x 上必须授权精确版本豁免 `dsh-client-ui-aqua@1.3.2` + `0.2.0-rc.2` 才能加载。
+
+> 说明：本分支**只**面向 0.2.x。上游 1.3.1 面向 0.1.x，两者互不兼容；若你仍在 0.1.x，
+> 请直接用上游版本。包内 `peerDependencies` 保留的是上游的 `^0.1.0-rc.5` 声明（未改动），
+> 这也正是需要版本豁免的原因，不要把它当作本分支的兼容范围。
 
 ### ⚠️ 关于许可（上游本身不一致）
 
@@ -65,7 +72,24 @@ node vendor/reinstall-aqua.cjs
 > 脚本里的 profile 路径默认是 Windows 桌面版的 `%USERPROFILE%\.dsh\profiles\desktop`，
 > 其他平台/自定义 profile 请改 `vendor/reinstall-aqua.cjs` 顶部的 `PROFILE` 常量。
 
-### 方式二：手动（了解每一步在做什么）
+### 方式二：`dsh plugin` 命令（仅在你已授权版本豁免后可用）
+
+```sh
+dsh plugin --profile <你的profile> add github:EXstarAmazing/dsh-aqua-0.2-adapt
+```
+
+⚠️ 直接执行**大概率会被拒绝**：本包 `peerDependencies` 仍写着上游的 `^0.1.0-rc.5`，DSH 0.2 会在启动前
+按「精确 name@version」拦下它，报 `incompatible-version`。若你确实想用这条路，需要先显式接受风险、授权精确版本：
+
+```sh
+dsh plugin --profile <你的profile> allow-version dsh-client-ui-aqua@1.3.2 --dsh-version 0.2.0-rc.2 --accept-risk
+```
+
+授权后重新执行上面的 `add`，再重启宿主。命令形式请以你所用宿主为准（官方 Desktop 用应用内的
+「插件 → 添加插件」，不要用 `dsh plugin --profile desktop`）。
+
+### 方式三：手动（了解每一步在做什么）
+
 
 1. 把仓库内容放到 profile 依赖目录：
    `%USERPROFILE%\.dsh\profiles\<profile>\node_modules\dsh-client-ui-aqua\`
@@ -85,11 +109,12 @@ node vendor/reinstall-aqua.cjs
    不授权则启动被拒。授权即表示你接受「可能崩溃或数据丢失」的风险。
 4. 重启应用 + 硬刷新。
 
-### 为什么不用 `dsh plugin add`
+### 关于 `dsh plugin add` 的两点提醒
 
-- npm 上没有 0.2 适配版，`dsh plugin add dsh-client-ui-aqua` 会拉 npm 上的 0.1.x 版（在 0.2 上必然崩）。
-- 直接 `dsh plugin add github:EXstarAmazing/dsh-aqua-0.2-adapt` 同样会被 `incompatible-version` 拒绝（peer 范围问题），
-  除非先用 `dsh plugin allow-version dsh-client-ui-aqua@1.3.2 --dsh-version 0.2.0-rc.2 --accept-risk` 授权。
+- npm 上**没有** 0.2 适配版：`dsh plugin add dsh-client-ui-aqua` 会拉到 npm 上的 0.1.x 版，那在 0.2 上必然崩。
+  必须用 `github:EXstarAmazing/dsh-aqua-0.2-adapt` 这个来源。
+- 无论哪种来源都会先撞上 `incompatible-version`（peer 范围写的是上游 `^0.1.0-rc.5`），
+  需要先按方式二授权精确版本豁免 `dsh-client-ui-aqua@1.3.2` + `0.2.0-rc.2`，再执行 `add`。
 
 ## 四、功能与开关位置
 

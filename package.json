@@ -44,7 +44,7 @@
       "platform": "web"
     }
   },
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "AGPL-3.0",
   "peerDependencies": {
     "@deepseek-ai/dsh-client-locale": "^0.1.0-rc.5",
     "@deepseek-ai/dsh-client-ui-primitives": "^0.1.0-rc.5",
