@@ -1,50 +1,47 @@
-# 提交给官方皮肤市场的 PR 草稿
+# 提交给官方皮肤市场的 PR 记录
 
-- **目标仓库**：`kingOfSoySauce/dsh-skin-market`
-- **新增文件**：`registry/skins/EXstarAmazing__dsh-aqua-0.2-adapt.yml`（内容见同目录 `registry-entry.yml`）
-- **建议标题**：
+**状态：已提交 → [kingOfSoySauce/dsh-skin-market#88](https://github.com/kingOfSoySauce/dsh-skin-market/pull/88)**
 
-  ```
-  registry: add dsh-aqua-0.2-adapt (Aqua glass theme, DSH 0.2 compatible fork)
-  ```
+- 分支：`EXstarAmazing:registry/add-dsh-aqua-0.2-adapt`
+- 内容：仅新增 1 个文件 `registry/skins/EXstarAmazing__dsh-aqua-0.2-adapt.yml`（+12 行，基于上游 `2e8ac6f`）
+- 标题：`feat(registry): add dsh-aqua-0.2-adapt`
+- 校验：`Validate registry submission` 工作流状态为 `action_required`
+  —— **fork PR 首次运行需要维护者点一次 Approve**，这是 GitHub 对来自 fork 的工作流的默认保护，不是失败。
+- PR #87 是同一提交的早期版本，因分支历史被重写而被 GitHub 自动关闭（非维护者拒绝），已由 #88 取代。
 
-- **建议正文**：
+## 条目本身的形态（严格按市场文档）
 
-  ```markdown
-  Adds a registry entry for a **DSH 0.2 compatible fork** of the Aqua glass theme.
+```yaml
+url: https://github.com/EXstarAmazing/dsh-aqua-0.2-adapt
+name: dsh-aqua-0.2-adapt
+author: EXstarAmazing
+description: >-
+  ...
+```
 
-  - Upstream: https://github.com/WYH66666666/DSH-Transparent-UI-Plugin (author WYH66666666)
-  - Fork: https://github.com/EXstarAmazing/dsh-aqua-0.2-adapt
-  - Package name is kept as `dsh-client-ui-aqua` / rowId `ui-aqua`, so the row resolves unchanged.
-  - Fork version: 1.3.2 · upstream baseline: `@deepseek-ai/dsh-client-ui-aqua@1.3.1` (npm tarball vendored in-repo)
+只允许 `url`、`subpath`、`name`、`author`、`description`、`screenshots`；
+CI 会从皮肤仓库补全 `package`、`commit`、`rowId`、`license`、`screenshots` 与 `health`。
+写 `package`/`rowId`/`install`/`compatibility` 等字段会直接失败。
 
-  Why a separate entry instead of updating the existing one: `WYH66666666__DSH-Transparent-UI-Plugin.yml`
-  targets `^0.1.0-rc.5`, and on 0.2.0-rc.2 that build fails at web boot — it requires
-  `@deepseek-ai/dsh-client-runtime`, a package DSH never ships (the platform module table seeds
-  `@deepseek-ai/dsh-client-store` instead). This fork fixes that plus four further 0.2 drifts:
-  the `IconCheckOutline16` → `IconCheckOutlineRegular` rename, the removal of `settings.plugin.item`,
-  the `defineStore` handle-vs-instance and `inject`-must-be-a-factory contracts, and the opaque
-  layout backgrounds that hid the ambient layer everywhere except the sidebar.
+## 我用市场的脚本做的本地预演（提交前自查）
 
-  Compatibility: `>=0.2.0-rc.2 <0.3.0-0`, web, verified on the Windows desktop build of 0.2.0-rc.2.
-  Install is `manual-only`: the fork is not on npm, and 0.2 refuses the package before it runs unless
-  the exact-version exemption `dsh-client-ui-aqua@1.3.2` on `0.2.0-rc.2` is granted. The repo's
-  `vendor/reinstall-aqua.cjs` performs install + patch + smoke test and writes that exemption;
-  `vendor/uninstall-aqua.cjs` rolls everything back.
+按 `scripts/hydrate-submission.mjs` + `scripts/skin-health.mjs` + `scripts/license.mjs` 的逻辑，
+用仓库当前提交离线推导，结果应为：
 
-  Note on licensing: the upstream repository LICENSE is AGPL-3.0 while the published npm artifact
-  carries an MIT license (`Copyright (c) 2026 John Wu`); both are archived verbatim in the fork.
-  The entry therefore records `license.code: AGPL-3.0` (the stricter of the two) — please adjust if
-  the market prefers a different convention for such forks.
+| 字段 | 推导值 |
+|---|---|
+| `package` | `dsh-client-ui-aqua` |
+| `rowId` | `ui-aqua`（来自 `cordis.patch.yml`） |
+| `install.version` / `commit` | `1.3.2` / 仓库当前 HEAD |
+| `license` | `AGPL-3.0`，`commercialUse: true` |
+| `health.checks` | readmeScreenshots / compatibility / installation / installCommand / topic 全部 `pass` |
+| `review` | compatibility / preview / installation 全部 `verified` |
 
-  Upstream authorship is credited prominently in the README, and this fork is explicitly marked as
-  unreviewed by the original author.
-  ```
+其中两项是我为此专门调整过的，值得记住：
 
-## 提交前的自查
+1. `health.installCommand` 要求 README 里出现 `dsh plugin … add` 形式的命令——README 里必须写，
+   哪怕真实安装更推荐走 `vendor/reinstall-aqua.cjs`。
+2. `compatibility.dsh` 取自本仓库 README 的**原文正则**，它只认 `0.1.0-rc.N` 写法并会回退到
+   `peerDependencies`。因此 README 里必须如实写出 peer 声明 `^0.1.0-rc.5`，否则市场会把
+   上游的 0.1.x 范围误当成兼容范围展示。
 
-- [ ] 仓库已推送且公开可见（截图 URL 用 `raw.githubusercontent.com/.../main/assets/*.png`，需与实际默认分支一致）
-- [ ] 仓库已加 topic：`dsh-plugin`（对应市场健康检查的 `topic` 项，也便于被发现）
-- [ ] `install.target` 的版本号与实际 `package.json` 的 `version` 一致（当前 1.3.2）
-- [ ] 若市场要求固定 commit，补上推送后的 commit SHA：`github:EXstarAmazing/dsh-aqua-0.2-adapt#<sha>`
-- [ ] 许可标注：若维护者更希望按 npm 产物的 MIT 标注，改为 `license.code: MIT / commercialUse: true`
